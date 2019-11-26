@@ -1,0 +1,2 @@
+nohup java -jar -Xms128M -Xmx512M rocketmq-console-ng-1.0.1.jar --server.port=12581 --rocketmq.config.namesrvAddr=172.16.0.18:9876 > nohup.out 2>&1 &
+# 配置信息默认保存目录 /tmp/rocketmq-console/1.0.1/data/monitor

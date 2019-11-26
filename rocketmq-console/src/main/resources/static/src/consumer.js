@@ -280,7 +280,8 @@ module.controller('consumerMonitorDialogController', function ($scope, ngDialog,
                 url: "monitor/createOrUpdateConsumerMonitor.do",
                 params:{consumeGroupName:$scope.ngDialogData.consumerGroupName,
                     minCount:$scope.ngDialogData.data.minCount,
-                    maxDiffTotal:$scope.ngDialogData.data.maxDiffTotal}
+                    maxDiffTotal:$scope.ngDialogData.data.maxDiffTotal,
+                    dingTalkURL:$scope.ngDialogData.data.dingTalkURL}
             }).success(function (resp) {
                 if(resp.status ==0){
                     Notification.info({message: "delete success!", delay: 2000});

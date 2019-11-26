@@ -19,6 +19,7 @@ package org.apache.rocketmq.console.model;
 public class ConsumerMonitorConfig {
     private int minCount;
     private int maxDiffTotal;
+    private String dingTalkURL;
 
     public ConsumerMonitorConfig() {
     }
@@ -26,6 +27,12 @@ public class ConsumerMonitorConfig {
     public ConsumerMonitorConfig(int minCount, int maxDiffTotal) {
         this.minCount = minCount;
         this.maxDiffTotal = maxDiffTotal;
+    }
+
+    public ConsumerMonitorConfig(int minCount, int maxDiffTotal, String dingTalkURL) {
+        this.minCount = minCount;
+        this.maxDiffTotal = maxDiffTotal;
+        this.dingTalkURL = dingTalkURL;
     }
 
     public int getMinCount() {
@@ -42,5 +49,13 @@ public class ConsumerMonitorConfig {
 
     public void setMaxDiffTotal(int maxDiffTotal) {
         this.maxDiffTotal = maxDiffTotal;
+    }
+
+    public String getDingTalkURL() {
+        return dingTalkURL;
+    }
+
+    public void setDingTalkURL(String dingTalkURL) {
+        this.dingTalkURL = dingTalkURL;
     }
 }

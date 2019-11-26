@@ -38,8 +38,8 @@ public class MonitorController {
     @RequestMapping(value = "/createOrUpdateConsumerMonitor.do", method = {RequestMethod.POST})
     @ResponseBody
     public Object createOrUpdateConsumerMonitor(@RequestParam String consumeGroupName, @RequestParam int minCount,
-        @RequestParam int maxDiffTotal) {
-        return monitorService.createOrUpdateConsumerMonitor(consumeGroupName, new ConsumerMonitorConfig(minCount, maxDiffTotal));
+        @RequestParam int maxDiffTotal, @RequestParam String dingTalkURL) {
+        return monitorService.createOrUpdateConsumerMonitor(consumeGroupName, new ConsumerMonitorConfig(minCount, maxDiffTotal, dingTalkURL));
     }
 
     @RequestMapping(value = "/consumerMonitorConfig.query", method = {RequestMethod.GET})
