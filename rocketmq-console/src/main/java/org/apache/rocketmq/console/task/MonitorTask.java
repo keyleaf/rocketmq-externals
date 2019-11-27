@@ -38,6 +38,7 @@ import org.apache.rocketmq.console.service.ConsumerService;
 import org.apache.rocketmq.console.service.MonitorService;
 import org.apache.rocketmq.console.service.TopicService;
 import org.apache.rocketmq.console.util.JsonUtil;
+import org.apache.rocketmq.console.util.OMPUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,26 +67,67 @@ public class MonitorTask {
     @Scheduled(cron = "0 0/5 * * * ?")
     public void scanProblemConsumeGroup() {
         logger.info("start scanProblemConsumeGroup");
-        String dingTalkURL = DEFAULT_DING_TALK_URL;
         for (Map.Entry<String, ConsumerMonitorConfig> configEntry : monitorService.queryConsumerMonitorConfig().entrySet()) {
             GroupConsumeInfo consumeInfo = consumerService.queryGroup(configEntry.getKey());
 
             ConsumerMonitorConfig consumerMonitorConfig = configEntry.getValue();
+            String alarmInfo = JsonUtil.obj2String(consumeInfo);
+            // message用封装类包装
+            OMPUtil.Message message = new OMPUtil.Message();
+            message.setGroup("公共技术组");
+            message.setLevel("一级");
+            message.setPhone("18654532101");
             if (consumerMonitorConfig != null && StringUtils.isNotBlank(consumerMonitorConfig.getDingTalkURL())) {
-                dingTalkURL = consumerMonitorConfig.getDingTalkURL();
+                message.setRobot(consumerMonitorConfig.getDingTalkURL());
             }
+            message.setContent(alarmInfo);
 
             if (consumeInfo.getCount() < configEntry.getValue().getMinCount()) {
-                // 低于阈值
-                String alarmInfo = JsonUtil.obj2String(consumeInfo);
-                logger.info("低于阈值 consumeInfo {}", alarmInfo);
-                pushAlarmInfo(dingTalkURL, "消息量低于阈值: " + alarmInfo);
+                // 低于下限阈值 推送告警
+                logger.info("低于下限阈值 推送告警 consumeInfo {}", alarmInfo);
+
+                // OMP 告警↓↓↓↓↓↓
+                String alertJsonObj = JSONObject.toJSONString(message);
+                String ruleId = "[告警]-rocketmq-console-低于下限阈值-" + consumeInfo.getGroup();
+                OMPUtil.OMPAlarmVO ompAlarmVO = new OMPUtil.OMPAlarmVO(ruleId,
+                        ruleId, SERVER_URL, "alerting", alertJsonObj, ruleId);
+                pushAlarmInfoToOMP(ompAlarmVO);
+                // OMP 告警↑↑↑↑↑↑
+            } else {
+                // 高于下限阈值 解除告警
+                logger.info("高于下限阈值 解除告警 consumeInfo {}", alarmInfo);
+
+                // OMP 告警↓↓↓↓↓↓
+                String alertJsonObj = JSONObject.toJSONString(message);
+                String ruleId = "[解除]-rocketmq-console-高于下限阈值-" + consumeInfo.getGroup();
+                OMPUtil.OMPAlarmVO ompAlarmVO = new OMPUtil.OMPAlarmVO(ruleId,
+                        ruleId, SERVER_URL, "ok", alertJsonObj, ruleId);
+                pushAlarmInfoToOMP(ompAlarmVO);
+                // OMP 告警↑↑↑↑↑↑
+
             }
             if (consumeInfo.getDiffTotal() > configEntry.getValue().getMaxDiffTotal()) {
-                // 高于阈值
-                String alarmInfo = JsonUtil.obj2String(consumeInfo);
-                logger.info("高于阈值 consumeInfo {}", alarmInfo);
-                pushAlarmInfo(dingTalkURL, "消息量高于阈值: " + alarmInfo);
+                // 高于上限阈值 推送告警
+                logger.info("高于上限阈值 推送告警 consumeInfo {}", alarmInfo);
+
+                // OMP 告警↓↓↓↓↓↓
+                String alertJsonObj = JSONObject.toJSONString(message);
+                String ruleId = "[告警]-rocketmq-console-高于下限阈值-" + consumeInfo.getGroup();
+                OMPUtil.OMPAlarmVO ompAlarmVO = new OMPUtil.OMPAlarmVO(ruleId,
+                        ruleId, SERVER_URL, "alerting", alertJsonObj, ruleId);
+                pushAlarmInfoToOMP(ompAlarmVO);
+                // OMP 告警↑↑↑↑↑↑
+            } else {
+                // 低于下限阈值 解除告警
+                logger.info("低于上限阈值 解除告警 consumeInfo {}", alarmInfo);
+
+                // OMP 告警↓↓↓↓↓↓
+                String alertJsonObj = JSONObject.toJSONString(message);
+                String ruleId = "[解除]-rocketmq-console-低于下限阈值-" + consumeInfo.getGroup();
+                OMPUtil.OMPAlarmVO ompAlarmVO = new OMPUtil.OMPAlarmVO(ruleId,
+                        ruleId, SERVER_URL, "ok", alertJsonObj, ruleId);
+                pushAlarmInfoToOMP(ompAlarmVO);
+                // OMP 告警↑↑↑↑↑↑
             }
         }
     }
@@ -93,12 +135,21 @@ public class MonitorTask {
     @Scheduled(cron = "0 0/10 * * * ?")
     public void scanDLQ() {
         logger.info("start scanDLQ");
+
+        // message用封装类包装
+        OMPUtil.Message message = new OMPUtil.Message();
+        message.setGroup("公共技术组");
+        message.setLevel("一级");
+        message.setPhone("18654532101");
+
         TopicList topicList = topicService.fetchAllTopicList(true);
         if (topicList == null) {
+            logger.info("topicList is null");
             return;
         }
         Set<String> allTopicSet =  topicList.getTopicList();
         if (CollectionUtils.isEmpty(allTopicSet)) {
+            logger.info("allTopicSet is empty");
             return;
         }
         List<JSONObject> dlqList = new ArrayList<>();
@@ -111,11 +162,24 @@ public class MonitorTask {
             }
         }
         if (CollectionUtils.isEmpty(dlqList)) {
-            return;
+            // 解除告警
+            // OMP 告警↓↓↓↓↓↓
+            String alertJsonObj = JSONObject.toJSONString(message);
+            String ruleId = "[解除]-rocketmq-console-死信队列如下";
+            OMPUtil.OMPAlarmVO ompAlarmVO = new OMPUtil.OMPAlarmVO(ruleId, ruleId, SERVER_URL, "ok", alertJsonObj, ruleId);
+            pushAlarmInfoToOMP(ompAlarmVO);
+            // OMP 告警↑↑↑↑↑↑
+        } else {
+            String alarmInfo = JsonUtil.obj2String(dlqList);
+            message.setContent(alarmInfo);
+            // 推送告警
+            // OMP 告警↓↓↓↓↓↓
+            String alertJsonObj = JSONObject.toJSONString(message);
+            String ruleId = "[告警]-rocketmq-console-死信队列如下";
+            OMPUtil.OMPAlarmVO ompAlarmVO = new OMPUtil.OMPAlarmVO(ruleId, ruleId, SERVER_URL, "alerting", alertJsonObj, ruleId);
+            pushAlarmInfoToOMP(ompAlarmVO);
+            // OMP 告警↑↑↑↑↑↑
         }
-        LinkMessage linkMessage = new LinkMessage();
-
-        pushAlarmInfo(DEFAULT_DING_TALK_URL, "死信队列如下: \n " + JSONObject.toJSONString(dlqList, SerializerFeature.PrettyFormat));
     }
 
     /**
@@ -133,16 +197,13 @@ public class MonitorTask {
         logger.info("dingTalkURL is : {}", dingTalkURL);
         RobotMessageDTO robotMessageDTO = new RobotMessageDTO("环境信息: \n " + SERVER_URL + " \n " + alarmInfo, null);
         DingTalkUtil.sendMessageToDingTalk(dingTalkURL, robotMessageDTO);
-
-    }
-    private void pushLinkMessage(String dingTalkURL, LinkMessage linkMessage) {
-        try {
-            DingTalkChatBotUtil.sendMessageByUrl(dingTalkURL, linkMessage);
-        } catch (IOException e) {
-            logger.error("推送钉钉告警消息失败", e);
-        }
-
     }
 
-
+    /**
+     * 推送告警消息到OMP
+     * @param ompAlarmVO
+     */
+    private void pushAlarmInfoToOMP(OMPUtil.OMPAlarmVO ompAlarmVO) {
+        OMPUtil.pushAlarmToOMP(ompAlarmVO);
+    }
 }
